@@ -1,0 +1,21 @@
+{
+  "name": "@onelastleaf/plugin-sdk",
+  "version": "0.1.0",
+  "description": "Node.js SDK for onelastleaf process plugins",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "repository": "github:onelastleaf/node-plugin-sdk",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": ["src", "proto", "LICENSE", "README.md"],
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test" },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@grpc/proto-loader": "^0.8.0"
+  }
+}
