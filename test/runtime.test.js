@@ -5,7 +5,7 @@ import { validateEndpoint } from '../src/runtime.js';
 
 test('validates identity and exposes exact fingerprint', () => {
   assert.throws(() => new Plugin('invalid', '0.1.0'));
-  assert.equal(PROTOCOL_SCHEMA_SHA256, '21c145638fbe6a1f2d9a2cb2114403d4bee4da3c0adbac09e805a98a77d0d4da');
+  assert.equal(PROTOCOL_SCHEMA_SHA256, '9b236b37455965858413f5717a88e28568a459e81e87a28ff77be8845bcff75a');
   assert.deepEqual(ActionResult.string('value').result, { stringValue: 'value' });
 });
 
