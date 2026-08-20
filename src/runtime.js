@@ -2,7 +2,6 @@ import net from 'node:net';
 import { grpc, protocol } from './protocol.js';
 import { Host } from './host.js';
 
-export const PROTOCOL_SCHEMA_SHA256 = '9b236b37455965858413f5717a88e28568a459e81e87a28ff77be8845bcff75a';
 const MAXIMUM_ENVELOPE_BYTES = 64 * 1024 * 1024;
 
 export class Plugin {
@@ -57,7 +56,6 @@ export class Plugin {
         pluginHello: {
           pluginId: { value: this.#id },
           pluginName: first.hostHello.pluginName,
-          protocolSchemaSha256: Buffer.from(PROTOCOL_SCHEMA_SHA256, 'hex'),
           actions: [...this.#actions].map(([name, action]) => ({ name, description: action.description })),
           pluginVersion: this.#version,
         },
@@ -285,7 +283,6 @@ function deadlineTimeout(deadline, abort) {
 
 function validateHello(pluginId, hello) {
   if (!hello.node
-      || !Buffer.from(hello.protocolSchemaSha256).equals(Buffer.from(PROTOCOL_SCHEMA_SHA256, 'hex'))
       || hello.pluginId?.value !== pluginId || !hello.pluginName?.value
       || !hello.maximumCallDepth || !hello.maximumCausalDepth || !hello.maximumArtifactChunkBytes) {
     throw new Error('HostHello does not describe the expected plugin instance');

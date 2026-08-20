@@ -47,5 +47,3 @@ export class Plugin {
   action(name: string, description: string, handler: ActionHandler): this;
   run(options?: { endpoint?: string; stdin?: NodeJS.ReadableStream }): Promise<void>;
 }
-
-export const PROTOCOL_SCHEMA_SHA256: string;

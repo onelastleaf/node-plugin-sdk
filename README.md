@@ -88,8 +88,8 @@ a useful, explicit check before committing.
 
 `oll plugin new` only writes files. It deliberately does not install packages,
 initialize Git, contact the daemon, or use the network. The generated
-`package.json` pins the SDK version that matches oll's protocol fingerprint,
-and the generated `oll.toml` tells oll how to install and launch the project.
+`package.json` pins the SDK version for reproducible builds, and the generated
+`oll.toml` tells oll how to install and launch the project.
 
 ## Register an action
 
@@ -267,6 +267,15 @@ a release-tested runtime for this SDK. Changing the runtime to
 experimental choice that should pass the full oll plugin conformance suite
 before production use. The package's declared runtime contract remains
 Node.js 20 or newer.
+
+## Protocol evolution
+
+This SDK follows the canonical protobuf wire contract. It never computes,
+embeds, publishes, or compares a schema hash or fingerprint. Descriptor-wide
+hashes change for compatible additions and unrelated services, so they reject
+valid peers. Protocol changes instead preserve field numbers and wire types,
+give additions safe absent semantics, and tolerate unknown fields. Exact SDK
+pins provide reproducible builds; they are not protobuf API versioning.
 
 ## How the plugin process fits into oll
 

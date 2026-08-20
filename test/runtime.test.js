@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ActionResult, Host, Plugin, PROTOCOL_SCHEMA_SHA256 } from '../src/index.js';
+import { ActionResult, Host, Plugin } from '../src/index.js';
 import { validateEndpoint } from '../src/runtime.js';
 
-test('validates identity and exposes exact fingerprint', () => {
+test('validates identity and results', () => {
   assert.throws(() => new Plugin('invalid', '0.1.0'));
-  assert.equal(PROTOCOL_SCHEMA_SHA256, '9b236b37455965858413f5717a88e28568a459e81e87a28ff77be8845bcff75a');
   assert.deepEqual(ActionResult.string('value').result, { stringValue: 'value' });
 });
 
