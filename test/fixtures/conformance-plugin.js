@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { ActionResult, Plugin } from '../src/index.js';
+import { ActionResult, Plugin } from '../../src/index.js';
 
 const plugin = new Plugin('org.onelastleaf.conformance', '0.1.0')
   .action('echo', 'Echo arguments', async (_context, arguments_) =>
