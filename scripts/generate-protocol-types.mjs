@@ -6,47 +6,53 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const destination = path.join(root, 'src/generated');
-const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'oll-node-protocol-types-'));
-const generated = path.join(temporaryRoot, 'generated');
 const generator = path.join(
   root,
   'node_modules/@grpc/proto-loader/build/bin/proto-loader-gen-types.js',
 );
 
-try {
-  const result = spawnSync(process.execPath, [
-    generator,
-    '--longs=String',
-    '--enums=String',
-    '--oneofs',
-    '--includeComments',
-    '--grpcLib=@grpc/grpc-js',
-    '--includeDirs=proto',
-    '--targetFileExtension=.ts',
-    '--importFileExtension=.js',
-    `--outDir=${generated}`,
-    'oll/plugin.proto',
-  ], { cwd: root, encoding: 'utf8' });
-  if (result.error) {
-    throw result.error;
-  } else if (result.status !== 0) {
-    process.stderr.write(result.stderr || result.stdout);
-    process.exitCode = result.status ?? 1;
-  } else {
-    await writeGeneratedIndex(generated);
-    if (process.argv.includes('--check')) {
-      const difference = await firstDifference(generated, destination);
-      if (difference) {
-        console.error(`generated protocol declarations are stale: ${difference}`);
-        process.exitCode = 1;
-      }
+if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  await generateProtocolTypes();
+}
+
+async function generateProtocolTypes() {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'oll-node-protocol-types-'));
+  const generated = path.join(temporaryRoot, 'generated');
+  try {
+    const result = spawnSync(process.execPath, [
+      generator,
+      '--longs=String',
+      '--enums=String',
+      '--oneofs',
+      '--includeComments',
+      '--grpcLib=@grpc/grpc-js',
+      '--includeDirs=proto',
+      '--targetFileExtension=.ts',
+      '--importFileExtension=.js',
+      `--outDir=${generated}`,
+      'oll/plugin.proto',
+    ], { cwd: root, encoding: 'utf8' });
+    if (result.error) {
+      throw result.error;
+    } else if (result.status !== 0) {
+      process.stderr.write(result.stderr || result.stdout);
+      process.exitCode = result.status ?? 1;
     } else {
-      await rm(destination, { recursive: true, force: true });
-      await cp(generated, destination, { recursive: true });
+      await writeGeneratedIndex(generated);
+      if (process.argv.includes('--check')) {
+        const difference = await firstDifference(generated, destination);
+        if (difference) {
+          console.error(`generated protocol declarations are stale: ${difference}`);
+          process.exitCode = 1;
+        }
+      } else {
+        await rm(destination, { recursive: true, force: true });
+        await cp(generated, destination, { recursive: true });
+      }
     }
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
-} finally {
-  await rm(temporaryRoot, { recursive: true, force: true });
 }
 
 async function writeGeneratedIndex(directory) {
@@ -63,7 +69,7 @@ async function writeGeneratedIndex(directory) {
   );
 }
 
-async function firstDifference(expectedRoot, actualRoot) {
+export async function firstDifference(expectedRoot, actualRoot) {
   let expected;
   let actual;
   try {
@@ -78,13 +84,20 @@ async function firstDifference(expectedRoot, actualRoot) {
   for (const name of [...names].sort()) {
     if (!expectedNames.has(name)) return `${name} should be removed`;
     if (!actualNames.has(name)) return `${name} is missing`;
-    const [left, right] = await Promise.all([
-      readFile(path.join(expectedRoot, name)),
-      readFile(path.join(actualRoot, name)),
+    const [expectedContents, actualContents] = await Promise.all([
+      readFile(path.join(expectedRoot, name), 'utf8'),
+      readFile(path.join(actualRoot, name), 'utf8'),
     ]);
-    if (!left.equals(right)) return `${name} differs`;
+    const expectedText = normalizeLineEndings(expectedContents);
+    const actualText = normalizeLineEndings(actualContents);
+    if (expectedText !== actualText) return `${name} differs`;
   }
   return undefined;
+}
+
+function normalizeLineEndings(contents) {
+  // Git for Windows may materialize tracked text as CRLF without changing its content.
+  return contents.replaceAll('\r\n', '\n');
 }
 
 async function listFiles(directory, prefix = '') {
