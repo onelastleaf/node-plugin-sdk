@@ -9,13 +9,26 @@
     ".": {
       "types": "./src/index.d.ts",
       "import": "./src/index.js"
+    },
+    "./protocol-types": {
+      "types": "./src/generated/index.d.ts"
     }
   },
   "files": ["src", "proto", "LICENSE", "README.md"],
   "engines": { "node": ">=20" },
-  "scripts": { "test": "node --test" },
+  "scripts": {
+    "generate:types": "node scripts/generate-protocol-types.mjs",
+    "check:types": "node scripts/generate-protocol-types.mjs --check",
+    "check:js": "tsc -p jsconfig.json",
+    "typecheck": "tsc -p test/types/tsconfig.json",
+    "test": "node --test test/*.test.js && npm run check:js && npm run typecheck && npm run check:types"
+  },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
     "@grpc/proto-loader": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.0"
   }
 }

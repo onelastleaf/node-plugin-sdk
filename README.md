@@ -45,8 +45,12 @@ npm test
 npm pack --dry-run
 ```
 
-`npm test` runs the Node.js unit tests. `npm pack --dry-run` shows the exact
-files that would go into `@onelastleaf/plugin-sdk` without publishing anything.
+`npm test` runs the Node.js regression tests, statically checks the runtime
+JavaScript, compiles the public TypeScript examples in strict mode, and checks
+that generated declarations still match the checked-in `.proto` files. After
+intentionally syncing a protocol change, run `npm run generate:types`. The
+`npm pack --dry-run` command shows the exact files that would go into
+`@onelastleaf/plugin-sdk` without publishing anything.
 
 ## Create a plugin with oll
 
@@ -110,7 +114,8 @@ await new Plugin('dev.example.hello-node', '0.1.0')
 An action receives an `ActionContext` and the ordered string arguments from
 `oll plugin call`. Useful context members include:
 
-- `signal`, which is aborted when the job is cancelled or reaches its deadline;
+- `signal`, which is aborted after oll sends a cancellation for a user request
+  or deadline;
 - `getConfig(...)` and `invokeConfigFunction(...)` for the plugin's permitted
   live configuration;
 - `hostCall(...)` for permitted host capabilities;
@@ -120,6 +125,62 @@ An action receives an `ActionContext` and the ordered string arguments from
 Return an `ActionResult`, or throw an error to fail the job. A plugin may serve
 more than one job at a time, so action handlers should not rely on mutable
 process-wide state unless they synchronize it themselves.
+
+Cancellation is cooperative. Stop new work when `signal` aborts and let the
+handler promise settle. The SDK keeps reading heartbeats and other session
+messages while it waits, but it does not acknowledge cancellation until the
+handler has actually stopped. oll owns deadline enforcement and sends the same
+job-scoped cancellation request for a timeout; the SDK does not run a competing
+local timer.
+
+The context deliberately does not expose a raw transport or a constructible
+`Host`. Its methods attach the negotiated trace, depth, job, and cancellation
+state, so a call cannot accidentally escape its action scope.
+
+### TypeScript protocol types
+
+The main entry point exports strict action, configuration, artifact, trace, and
+host-call types. The complete generated protobuf input/output types live at the
+type-only `protocol-types` entry point:
+
+```ts
+import { ActionResult, Plugin } from '@onelastleaf/plugin-sdk';
+import type { ReadDocumentRequest } from '@onelastleaf/plugin-sdk/protocol-types';
+
+const read: ReadDocumentRequest = {
+  path: { value: '/notes/today.md' },
+  projection: 'DOCUMENT_PROJECTION_CONTENT',
+};
+
+await new Plugin('dev.example.typed', '0.1.0')
+  .action('read', 'Read one document', async (context) => {
+    const response = await context.hostCall({ readDocument: read });
+    return ActionResult.string(response.readDocument.document?.content ?? '');
+  })
+  .run();
+```
+
+Host rejections use `HostError` instead of losing protobuf diagnostics in a
+plain `Error`. Its `code`, `retryable`, `metadata`, and `details` fields remain
+available for explicit retry or revision-conflict handling.
+
+### Stream an artifact
+
+An array of chunks needs no extra option. A general iterable or async iterable
+also supplies its declared protobuf chunk count so the SDK can validate the
+plan before oll creates staging state:
+
+```js
+await context.storeArtifact(descriptor, [header, body]);
+
+await context.storeArtifact(descriptor, chunkSource(), {
+  chunkCount: expectedChunkCount,
+});
+```
+
+The SDK pulls and hashes one chunk at a time, checks cancellation between
+chunks, and verifies the declared size and SHA-256 before completing the
+transfer. It does not retain or make multiple passes over the whole artifact.
 
 ## Install the plugin into oll
 
@@ -276,6 +337,11 @@ hashes change for compatible additions and unrelated services, so they reject
 valid peers. Protocol changes instead preserve field numbers and wire types,
 give additions safe absent semantics, and tolerate unknown fields. Exact SDK
 pins provide reproducible builds; they are not protobuf API versioning.
+
+The protocol also has no fixed encoded `PluginEnvelope` size. This SDK sets both
+grpc-js message limits to unlimited instead of retaining its smaller receive
+default. Artifact data remains bounded by the per-chunk limit from `HostHello`
+and uses the streaming transfer above.
 
 ## How the plugin process fits into oll
 
