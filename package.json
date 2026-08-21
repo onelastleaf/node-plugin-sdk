@@ -14,8 +14,15 @@
       "types": "./src/generated/index.d.ts"
     }
   },
-  "files": ["src", "proto", "LICENSE", "README.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "src",
+    "proto",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "generate:types": "node scripts/generate-protocol-types.mjs",
     "check:types": "node scripts/generate-protocol-types.mjs --check",
@@ -30,5 +37,8 @@
   "devDependencies": {
     "@types/node": "^20.19.43",
     "typescript": "^5.9.0"
+  },
+  "allowScripts": {
+    "protobufjs": false
   }
 }
