@@ -17,7 +17,7 @@
     "url": "git+https://github.com/onelastleaf/node-plugin-sdk.git"
   },
   "type": "module",
-  "license": "GPL-3.0-only",
+  "license": "GPL-3.0-or-later",
   "types": "./src/index.d.ts",
   "exports": {
     ".": {
